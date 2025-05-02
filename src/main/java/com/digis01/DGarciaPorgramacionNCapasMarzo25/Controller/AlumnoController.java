@@ -229,13 +229,13 @@ public class AlumnoController {
 
         RestTemplate restTemplate = new RestTemplate();
 
-        ResponseEntity<Result> responseEntity = restTemplate.exchange("http://localhost:8081/alumnoapi", 
+        ResponseEntity<Result<AlumnoDireccion>> responseEntity = restTemplate.exchange("http://localhost:8081/alumnoapi", 
                 HttpMethod.GET, 
                 HttpEntity.EMPTY, 
-                new ParameterizedTypeReference<Result>(){});
+                new ParameterizedTypeReference<Result<AlumnoDireccion>>(){});
+        
         
         Result response = responseEntity.getBody();
-        
         
         
         Alumno alumnoBusqueda = new Alumno();
@@ -261,26 +261,26 @@ public class AlumnoController {
 //        return "AlumnoIndex";
 //    }
 //
-//    @GetMapping("Form/{IdAlumno}")
-//    public String Form(@PathVariable int IdAlumno, Model model) {
-//        if (IdAlumno == 0) { // Agregar
-//            AlumnoDireccion alumnoDireccion = new AlumnoDireccion();
-//            alumnoDireccion.Alumno = new Alumno();
-//            alumnoDireccion.Alumno.Semestre = new Semestre();
-//            alumnoDireccion.Direccion = new Direccion();
-//            alumnoDireccion.Direccion.Colonia = new Colonia();
-//
+    @GetMapping("Form/{IdAlumno}")
+    public String Form(@PathVariable int IdAlumno, Model model) {
+        if (IdAlumno == 0) { // Agregar
+            AlumnoDireccion alumnoDireccion = new AlumnoDireccion();
+            alumnoDireccion.Alumno = new Alumno();
+            alumnoDireccion.Alumno.Semestre = new Semestre();
+            alumnoDireccion.Direccion = new Direccion();
+            alumnoDireccion.Direccion.Colonia = new Colonia();
+
 //            model.addAttribute("semestres", SemestreDAOImplementation.GetAll().object);
 //            model.addAttribute("alumnoDireccion", alumnoDireccion);
 //            model.addAttribute("estados", estadoDAOImplementation.GetAll().correct ? estadoDAOImplementation.GetAll().objects : null);
-//            return "AlumnoForm";
-//        } else { // Editar
-//            System.out.println("Voy a editar");
+            return "AlumnoForm";
+        } else { // Editar
+            System.out.println("Voy a editar");
 //            Result result = alumnoDAOImplementation.direccionesByIdUsuario(IdAlumno);
 //            model.addAttribute("alumnoDirecciones", result.object);
-//            return "AlumnoDetail";
-//        }
-//    }
+            return "AlumnoDetail";
+        }
+    }
 //
 //    @GetMapping("/formEditable")
 //    public String FormEditable(Model model, @RequestParam int IdAlumno, @RequestParam(required = false) Integer IdDireccion) {
@@ -320,42 +320,49 @@ public class AlumnoController {
 //        return "AlumnoForm";
 //    }
 //
-//    @PostMapping("Form")
-//    public String Form(@Valid @ModelAttribute AlumnoDireccion alumnoDireccion, BindingResult BindingResult, @RequestParam MultipartFile imagenFile, Model model) {
-//
-//        try {
-//            if (!imagenFile.isEmpty()) {
-//                byte[] bytes = imagenFile.getBytes();
-//                String imgBase64 = Base64.getEncoder().encodeToString(bytes);
-//                alumnoDireccion.Alumno.setImagen(imgBase64);
-//            }
-//        } catch (Exception ex) {
-//            //Regresar al Form con la información que ya estaba
-//        }
-//
-//        if (alumnoDireccion.Alumno.getIdAlumno() == 0) { //Agregar
-//            //Logica para consumir DAO para agregar un nuevo usuario
-////            alumnoDireccion.Alumno.Semestre = new Semestre();
-////            alumnoDireccion.Alumno.Semestre.setIdSemestre(10);
-//            System.out.println("Estoy agregando un nuevo usuario y direccion");
-//            alumnoDireccion.Alumno.setFechaNacimiento(new Date());
-////            alumnoDAOImplementation.Add(alumnoDireccion);
-//            alumnoDAOImplementation.AddJPA(alumnoDireccion);
-//        } else {
-//            if (alumnoDireccion.Direccion.getIdDireccion() == -1) { //Editar usuario
+    @PostMapping("Form")
+    public String Form(@Valid @ModelAttribute AlumnoDireccion alumnoDireccion, BindingResult BindingResult, @RequestParam MultipartFile imagenFile, Model model) {
+
+        try {
+            if (!imagenFile.isEmpty()) {
+                byte[] bytes = imagenFile.getBytes();
+                String imgBase64 = Base64.getEncoder().encodeToString(bytes);
+                alumnoDireccion.Alumno.setImagen(imgBase64);
+            }
+        } catch (Exception ex) {
+            //Regresar al Form con la información que ya estaba
+        }
+        
+        RestTemplate restTemplate = new RestTemplate();
+
+        if (alumnoDireccion.Alumno.getIdAlumno() == 0) { //Agregar
+            //Logica para consumir DAO para agregar un nuevo usuario
+//            alumnoDireccion.Alumno.Semestre = new Semestre();
+//            alumnoDireccion.Alumno.Semestre.setIdSemestre(10);
+            System.out.println("Estoy agregando un nuevo usuario y direccion");
+            alumnoDireccion.Alumno.setFechaNacimiento(new Date());
+//            alumnoDAOImplementation.Add(alumnoDireccion);
+
+            HttpEntity<AlumnoDireccion> entity = new HttpEntity<>(alumnoDireccion);
+            restTemplate.exchange("endpointAdd",
+                    HttpMethod.POST,
+                    entity ,
+                    new ParameterizedTypeReference<Result>(){});
+        } else {
+            if (alumnoDireccion.Direccion.getIdDireccion() == -1) { //Editar usuario
 //                alumnoDAOImplementation.Update(alumnoDireccion.Alumno);
-//                System.out.println("Estoy actualizando un usuario");
-//            } else if (alumnoDireccion.Direccion.getIdDireccion() == 0) { //Agregar direccion
-//                //alumnoDAOImplementation.AddDireccion(alumnoDireccion);
-//                System.out.println("Estoy agregando direccion");
-//            } else { //Editar direccion
-//                //alumnoDAOImplementation.UpdateDireccion(alumnoDireccion);
-//                System.out.println("Estoy actualizando direccion");
-//            }
-//        }
-//
-//        return "redirect:/Alumno";
-//    }
+                System.out.println("Estoy actualizando un usuario");
+            } else if (alumnoDireccion.Direccion.getIdDireccion() == 0) { //Agregar direccion
+                //alumnoDAOImplementation.AddDireccion(alumnoDireccion);
+                System.out.println("Estoy agregando direccion");
+            } else { //Editar direccion
+                //alumnoDAOImplementation.UpdateDireccion(alumnoDireccion);
+                System.out.println("Estoy actualizando direccion");
+            }
+        }
+
+        return "redirect:/Alumno";
+    }
 //
 //    @GetMapping("MunicipioByIdEstado/{IdEstado}")
 //    @ResponseBody
