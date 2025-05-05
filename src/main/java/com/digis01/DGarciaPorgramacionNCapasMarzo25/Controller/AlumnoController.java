@@ -47,6 +47,9 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/Alumno")
 public class AlumnoController {
 
+    String urlBase = "http://localhost:8081/";
+    private RestTemplate restTemplate = new RestTemplate();
+    
 //   @GetMapping("/CargaMasiva")
 //    public String CargaMasiva() {
 //        return "CargaMasiva";
@@ -246,6 +249,27 @@ public class AlumnoController {
         model.addAttribute("listaAlumnos", response.objects);
 
         return "AlumnoIndex";
+    }
+    
+    @GetMapping("/deleteAlumno/{IdAlumno}")
+    public String DeleteAlumno(@PathVariable int IdAlumno) {
+        
+        try {
+            
+            ResponseEntity<Result> responseEntity = restTemplate.exchange(
+                    urlBase + "alumnoapi/delete/" +  IdAlumno,
+                    HttpMethod.DELETE,
+                    HttpEntity.EMPTY,
+                    new ParameterizedTypeReference<Result>() {      
+                    });
+            Result result = responseEntity.getBody();
+            
+            
+        } catch (Exception ex) {
+            System.out.println(ex.getLocalizedMessage());
+        }
+        
+        return "redirect:/Alumno";
     }
 //
 //    @PostMapping("/GetAllDinamico")
