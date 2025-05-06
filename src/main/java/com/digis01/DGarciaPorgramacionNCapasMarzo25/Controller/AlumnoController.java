@@ -5,8 +5,9 @@ import com.digis01.DGarciaPorgramacionNCapasMarzo25.ML.Alumno;
 import com.digis01.DGarciaPorgramacionNCapasMarzo25.ML.AlumnoDireccion;
 import com.digis01.DGarciaPorgramacionNCapasMarzo25.ML.Colonia;
 import com.digis01.DGarciaPorgramacionNCapasMarzo25.ML.Direccion;
+import com.digis01.DGarciaPorgramacionNCapasMarzo25.ML.Estado;
+import com.digis01.DGarciaPorgramacionNCapasMarzo25.ML.Municipio;
 import com.digis01.DGarciaPorgramacionNCapasMarzo25.ML.Result;
-import com.digis01.DGarciaPorgramacionNCapasMarzo25.ML.ResultFile;
 import com.digis01.DGarciaPorgramacionNCapasMarzo25.ML.Semestre;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
@@ -21,11 +22,6 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
@@ -293,10 +289,24 @@ public class AlumnoController {
             alumnoDireccion.Alumno.Semestre = new Semestre();
             alumnoDireccion.Direccion = new Direccion();
             alumnoDireccion.Direccion.Colonia = new Colonia();
+            alumnoDireccion.Direccion.Colonia.Municipio = new Municipio();
+            alumnoDireccion.Direccion.Colonia.Municipio.Estado = new Estado();
+            
+            RestTemplate restTemplate = new RestTemplate();
+            
+            ResponseEntity<Result<List<Semestre>>> response = restTemplate.exchange("http://localhost:8081/semestreapi", 
+                    HttpMethod.GET, 
+                    HttpEntity.EMPTY, 
+                    new ParameterizedTypeReference<Result<List<Semestre>>>(){});
 
-//            model.addAttribute("semestres", SemestreDAOImplementation.GetAll().object);
-//            model.addAttribute("alumnoDireccion", alumnoDireccion);
-//            model.addAttribute("estados", estadoDAOImplementation.GetAll().correct ? estadoDAOImplementation.GetAll().objects : null);
+            ResponseEntity<Result<List<Estado>>> responseEstado = restTemplate.exchange("http://localhost:8081/estadoapi", 
+                    HttpMethod.GET, 
+                    HttpEntity.EMPTY, 
+                    new ParameterizedTypeReference<Result<List<Estado>>>(){});
+            
+            model.addAttribute("semestres", response.getBody().object);
+            model.addAttribute("alumnoDireccion", alumnoDireccion);
+            model.addAttribute("estados", responseEstado.getBody().object);
             return "AlumnoForm";
         } else { // Editar
             System.out.println("Voy a editar");
