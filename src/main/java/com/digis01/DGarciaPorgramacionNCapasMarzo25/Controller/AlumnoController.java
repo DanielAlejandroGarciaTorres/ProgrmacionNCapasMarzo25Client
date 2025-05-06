@@ -8,6 +8,7 @@ import com.digis01.DGarciaPorgramacionNCapasMarzo25.ML.Direccion;
 import com.digis01.DGarciaPorgramacionNCapasMarzo25.ML.Estado;
 import com.digis01.DGarciaPorgramacionNCapasMarzo25.ML.Municipio;
 import com.digis01.DGarciaPorgramacionNCapasMarzo25.ML.Result;
+import com.digis01.DGarciaPorgramacionNCapasMarzo25.ML.ResultFile;
 import com.digis01.DGarciaPorgramacionNCapasMarzo25.ML.Semestre;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
@@ -23,11 +24,16 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -46,159 +52,61 @@ public class AlumnoController {
     String urlBase = "http://localhost:8081/";
     private RestTemplate restTemplate = new RestTemplate();
     
-//   @GetMapping("/CargaMasiva")
-//    public String CargaMasiva() {
-//        return "CargaMasiva";
-//    }
-//
-//    @PostMapping("/CargaMasiva")
-//    public String CargaMasiva(@RequestParam MultipartFile archivo, Model model, HttpSession session) {
-//
-//        try {
-//            //Guardarlo en un punto del sistema
-//            if (archivo != null && !archivo.isEmpty()) { //El archivo no sea nulo ni esté vacío
-//
-//                //"NombreArchivo.txt"
-//                //String[] arreglo = {"NombreArchivo", "txt"};
-//                String tipoArchivo = archivo.getOriginalFilename().split("\\.")[1];
-//
-//                String root = System.getProperty("user.dir"); //Obtener direccion del proyecto en el equipo
-//                String path = "src/main/resources/static/archivos"; //Path relativo dentro del proyecto
-//                String fecha = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmSS"));
-//                String absolutePath = root + "/" + path + "/" + fecha + archivo.getOriginalFilename();
-//                archivo.transferTo(new File(absolutePath));
-//
-//                //Leer el archivo
-//                List<AlumnoDireccion> listaAlumnos = new ArrayList();
-//                if (tipoArchivo.equals("txt")) {
-//                    listaAlumnos = LecturaArchivoTXT(new File(absolutePath)); //método para leer la lista
-//                } else {
-//                    listaAlumnos = LecturaArchivoExcel(new File(absolutePath));
-//                }
-//
-//                //Validar el archivo
-//                List<ResultFile> listaErrores = ValidarArchivo(listaAlumnos);
-//
+   @GetMapping("/CargaMasiva")
+    public String CargaMasiva() {
+        return "CargaMasiva";
+    }
+
+    @PostMapping("/CargaMasiva")
+    public String CargaMasiva(@RequestParam MultipartFile archivo, Model model, HttpSession session) {
+
+        try {
+            //Guardarlo en un punto del sistema
+            if (archivo != null && !archivo.isEmpty()) { //El archivo no sea nulo ni esté vacío
+
+                //Body 
+                ByteArrayResource byteArrayResource = new ByteArrayResource(archivo.getBytes());
+                MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+                body.add("archivo", byteArrayResource);
+                
+                //Headers
+                HttpHeaders httpHeaders = new HttpHeaders();
+                httpHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
+                
+                //Entidad de la petición
+                HttpEntity<MultiValueMap<String, Object>> httpEntity = new HttpEntity(body, httpHeaders);
+                
+                //Recibe ResultFile o Result?
+                ResponseEntity<ResultFile> responseEntity = restTemplate.exchange(
+                        urlBase + "alumnoapi/CargaMasiva",
+                        HttpMethod.GET,
+                        httpEntity,
+                        new ParameterizedTypeReference<ResultFile>(){
+                        });
+                
+                
+                //¿Dónde viene mi lista de Errores?
 //                if (listaErrores.isEmpty()) {
 //                    //Proceso mi archivo
-//                    session.setAttribute("urlFile", absolutePath);
-//                    session.setAttribute("tipoArchivo", tipoArchivo);
+//                    //session.setAttribute("urlFile", absolutePath);
+//                    //session.setAttribute("tipoArchivo", tipoArchivo);
 //                    model.addAttribute("listaErrores", listaErrores);
 //                } else {
 //                    //Mando mis errores
 //                    model.addAttribute("listaErrores", listaErrores);
 //                }
-//
-//            }
-//        } catch (Exception ex) {
-//            return "redirect:/Alumno/CargaMasiva";
-//        }
-//
-//        return "CargaMasiva";
-//    }
-//
-//    public List<AlumnoDireccion> LecturaArchivoTXT(File archivo) {
-//        List<AlumnoDireccion> listaAlumnos = new ArrayList<>();
-//
-//        try (FileReader fileReader = new FileReader(archivo); BufferedReader bufferedReader = new BufferedReader(fileReader);) {
-//
-//            String linea;
-//
-//            while ((linea = bufferedReader.readLine()) != null) {
-//                String[] campos = linea.split("\\|");
-//
-//                AlumnoDireccion alumnoDireccion = new AlumnoDireccion();
-//                alumnoDireccion.Alumno = new Alumno();
-//                alumnoDireccion.Alumno.setNombre(campos[0]);
-//                alumnoDireccion.Alumno.setApellidoPaterno(campos[1]);
-//                alumnoDireccion.Alumno.setApellidoMaterno(campos[2]);
-//                alumnoDireccion.Alumno.setUsername(campos[3]);
-//                alumnoDireccion.Alumno.setEmail(campos[4]);
-//                //Darle formato a la fecha de nacimiento
-//                SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd"); //Dar formato a la fecha
-//                alumnoDireccion.Alumno.setFechaNacimiento(formatter.parse(campos[5]));
-//                alumnoDireccion.Alumno.setStatus(Integer.parseInt(campos[6]));
-//                alumnoDireccion.Alumno.setImagen(null);
-//                alumnoDireccion.Alumno.Semestre = new Semestre();
-//                alumnoDireccion.Alumno.Semestre.setIdSemestre(Integer.parseInt(campos[7]));
-//
-//                alumnoDireccion.Direccion = new Direccion();
-//                alumnoDireccion.Direccion.setCalle(campos[8]);
-//                alumnoDireccion.Direccion.setNumeroExterior(campos[9]);
-//                alumnoDireccion.Direccion.setNumeroInterior(campos[10]);
-//
-//                alumnoDireccion.Direccion.Colonia = new Colonia();
-//                alumnoDireccion.Direccion.Colonia.setIdColonia(Integer.parseInt(campos[11]));
-//
-//                listaAlumnos.add(alumnoDireccion);
-//            }
-//
-//        } catch (Exception ex) {
-//            listaAlumnos = null;
-//        }
-//
-//        return listaAlumnos;
-//    }
-//
-//    public List<AlumnoDireccion> LecturaArchivoExcel(File archivo) {
-//        List<AlumnoDireccion> listaAlumnos = new ArrayList<>();
-//        try (XSSFWorkbook workbook = new XSSFWorkbook(archivo);) {
-//            for (Sheet sheet : workbook) {
-//
-//                for (Row row : sheet) {
-//
-//                    AlumnoDireccion alumnoDireccion = new AlumnoDireccion();
-//                    alumnoDireccion.Alumno = new Alumno();
-//                    alumnoDireccion.Alumno.setNombre(row.getCell(0).toString());
-//                    alumnoDireccion.Alumno.setApellidoPaterno(row.getCell(1).toString());
-//                    alumnoDireccion.Alumno.setApellidoMaterno(row.getCell(2).toString());
-//                    alumnoDireccion.Alumno.setEmail(row.getCell(3).toString());
-//                    alumnoDireccion.Alumno.Semestre = new Semestre();
-//                    alumnoDireccion.Alumno.Semestre.setIdSemestre(Integer.parseInt(row.getCell(4).toString()));
-//                    alumnoDireccion.Alumno.setStatus(row.getCell(3) != null ? (int) row.getCell(3).getNumericCellValue() : 0 );
-//                    
-//                }
-//                
-//            }
-//        } catch (Exception ex) {
-//            System.out.println("Error al abrir el archivo");
-//        }
-//
-//        return listaAlumnos;
-//    }
-//
-//    public List<ResultFile> ValidarArchivo(List<AlumnoDireccion> listaAlumnos) {
-//        List<ResultFile> listaErrores = new ArrayList<>();
-//        
-//        
-//        
-//        
-//        
-//
-//        if (listaAlumnos == null) {
-//            listaErrores.add(new ResultFile(0, "La lista es nula", "La lista es nula"));
-//        } else if (listaAlumnos.isEmpty()) {
-//            listaErrores.add(new ResultFile(0, "La lista está vacía", "La lista está vacía"));
-//        } else {
-//            int fila = 1;
-//            for (AlumnoDireccion alumnoDireccion : listaAlumnos) {
-//                if (alumnoDireccion.Alumno.getNombre() == null || alumnoDireccion.Alumno.getNombre().equals("")) {
-//                    listaErrores.add(new ResultFile(fila, alumnoDireccion.Alumno.getNombre(), "El nombre es un campo oligatorio"));
-//                }
-//
-//                if (alumnoDireccion.Alumno.getApellidoPaterno() == null || alumnoDireccion.Alumno.getApellidoPaterno().equals("")) {
-//                    listaErrores.add(new ResultFile(fila, alumnoDireccion.Alumno.getApellidoPaterno(), "El Apellido Paterno es un campo oligatorio"));
-//                }
-//
-//                if (alumnoDireccion.Alumno.getUsername() == null || alumnoDireccion.Alumno.getUsername().equals("")) {
-//                    listaErrores.add(new ResultFile(fila, alumnoDireccion.Alumno.getApellidoPaterno(), "El Username es un campo oligatorio"));
-//                }
-//                fila++;
-//            }
-//        }
-//        return listaErrores;
-//    }
-//    
+
+                return null;
+
+            }
+        } catch (Exception ex) {
+            return "redirect:/Alumno/CargaMasiva";
+        }
+
+        return "CargaMasiva";
+    }
+
+
 //    @GetMapping("/CargaMasiva/Procesar")
 //    public String Procesar(HttpSession session) {
 //        
