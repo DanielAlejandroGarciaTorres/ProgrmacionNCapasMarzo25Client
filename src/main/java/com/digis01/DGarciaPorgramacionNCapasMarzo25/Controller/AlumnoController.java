@@ -1,6 +1,5 @@
 package com.digis01.DGarciaPorgramacionNCapasMarzo25.Controller;
 
-
 import com.digis01.DGarciaPorgramacionNCapasMarzo25.ML.Alumno;
 import com.digis01.DGarciaPorgramacionNCapasMarzo25.ML.AlumnoDireccion;
 import com.digis01.DGarciaPorgramacionNCapasMarzo25.ML.Colonia;
@@ -23,6 +22,7 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
@@ -51,8 +51,8 @@ public class AlumnoController {
 
     String urlBase = "http://localhost:8081/";
     private RestTemplate restTemplate = new RestTemplate();
-    
-   @GetMapping("/CargaMasiva")
+
+    @GetMapping("/CargaMasiva")
     public String CargaMasiva() {
         return "CargaMasiva";
     }
@@ -65,38 +65,44 @@ public class AlumnoController {
             if (archivo != null && !archivo.isEmpty()) { //El archivo no sea nulo ni esté vacío
 
                 //Body 
-                ByteArrayResource byteArrayResource = new ByteArrayResource(archivo.getBytes());
+                ByteArrayResource byteArrayResource = new ByteArrayResource(archivo.getBytes()) {
+                    @Override
+                    public String getFilename() {
+                        return archivo.getOriginalFilename();
+                    }
+                };
+
                 MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
                 body.add("archivo", byteArrayResource);
-                
+
                 //Headers
                 HttpHeaders httpHeaders = new HttpHeaders();
                 httpHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
-                
-                //Entidad de la petición
-                HttpEntity<MultiValueMap<String, Object>> httpEntity = new HttpEntity(body, httpHeaders);
-                
-                //Recibe ResultFile o Result?
-                ResponseEntity<ResultFile> responseEntity = restTemplate.exchange(
-                        urlBase + "alumnoapi/CargaMasiva",
-                        HttpMethod.GET,
-                        httpEntity,
-                        new ParameterizedTypeReference<ResultFile>(){
-                        });
-                
-                
-                //¿Dónde viene mi lista de Errores?
-//                if (listaErrores.isEmpty()) {
-//                    //Proceso mi archivo
-//                    //session.setAttribute("urlFile", absolutePath);
-//                    //session.setAttribute("tipoArchivo", tipoArchivo);
-//                    model.addAttribute("listaErrores", listaErrores);
-//                } else {
-//                    //Mando mis errores
-//                    model.addAttribute("listaErrores", listaErrores);
-//                }
 
-                return null;
+                //Entidad de la petición
+                HttpEntity<MultiValueMap<String, Object>> httpEntity
+                        = new HttpEntity<>(body, httpHeaders);
+
+                ResponseEntity<Map<String, Object>> responseEntity = restTemplate.exchange(
+                        urlBase + "alumnoapi/CargaMasiva",
+                        HttpMethod.POST,
+                        httpEntity,
+                        new ParameterizedTypeReference<Map<String, Object>>() {
+                });
+
+                //¿Dónde viene mi lista de Errores?
+                //(boolean) responseEntity.getBody().get("correct") == true
+                if (responseEntity.getStatusCode().is2xxSuccessful()) {
+                    model.addAttribute("correcto", true);
+                    session.setAttribute("urlFile", responseEntity.getBody().get("object"));
+
+                } else {
+
+                    if (responseEntity.getStatusCode().is4xxClientError()) {
+                        model.addAttribute("listaErrores", (String) responseEntity.getBody().get("objects"));
+                    }
+
+                }
 
             }
         } catch (Exception ex) {
@@ -106,45 +112,44 @@ public class AlumnoController {
         return "CargaMasiva";
     }
 
+    @GetMapping("/CargaMasiva/Procesar")
+    public String Procesar(HttpSession session) {
 
-//    @GetMapping("/CargaMasiva/Procesar")
-//    public String Procesar(HttpSession session) {
-//        
-//        String absolutePath = session.getAttribute("urlFile").toString();
-//        String tipoArchivo = session.getAttribute("tipoArchivo").toString();
-//        List<AlumnoDireccion> listaAlumnos = new ArrayList<>();
-//        
-//        if (tipoArchivo.equals("txt")) {
-//            listaAlumnos = LecturaArchivoTXT(new File(absolutePath));
-//        } else {
-//            listaAlumnos = LecturaArchivoExcel(new File(absolutePath));
-//        }
-//        
-//        for (AlumnoDireccion alumnoDireccion : listaAlumnos) {
-//            alumnoDAOImplementation.Add(alumnoDireccion);
-//        }
-//        
-//        return "/CargaMasiva";
-//    }
-//    
+        String absolutePath = session.getAttribute("urlFile").toString();
+
+        ResponseEntity<Result> responseEntity = restTemplate.exchange(urlBase + "alumnoapi/CargaMasiva/Procesar",
+                HttpMethod.POST,
+                new HttpEntity<>(absolutePath),
+                new ParameterizedTypeReference<Result>() {
+        });
+
+        if (responseEntity.getBody().correct) {
+            //Validaciones
+        }
+
+        if (responseEntity.getStatusCode().equals(200)) {
+            //Validaciones
+        }
+
+        return "/CargaMasiva";
+    }
+
     @GetMapping
     public String Index(Model model) {
 
         //        Result result = alumnoDAOImplementation.GetAll();
 //        Result resultJPA = alumnoDAOImplementation.GetAllJPA();
 //        Result resultSemestre = SemestreDAOImplementation.GetAll();
-
         RestTemplate restTemplate = new RestTemplate();
 
-        ResponseEntity<Result<AlumnoDireccion>> responseEntity = restTemplate.exchange("http://localhost:8081/alumnoapi", 
-                HttpMethod.GET, 
-                HttpEntity.EMPTY, 
-                new ParameterizedTypeReference<Result<AlumnoDireccion>>(){});
-        
-        
+        ResponseEntity<Result<AlumnoDireccion>> responseEntity = restTemplate.exchange("http://localhost:8081/alumnoapi",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                new ParameterizedTypeReference<Result<AlumnoDireccion>>() {
+        });
+
         Result response = responseEntity.getBody();
-        
-        
+
         Alumno alumnoBusqueda = new Alumno();
         alumnoBusqueda.Semestre = new Semestre();
 
@@ -154,25 +159,24 @@ public class AlumnoController {
 
         return "AlumnoIndex";
     }
-    
+
     @GetMapping("/deleteAlumno/{IdAlumno}")
     public String DeleteAlumno(@PathVariable int IdAlumno) {
-        
+
         try {
-            
+
             ResponseEntity<Result> responseEntity = restTemplate.exchange(
-                    urlBase + "alumnoapi/delete/" +  IdAlumno,
+                    urlBase + "alumnoapi/delete/" + IdAlumno,
                     HttpMethod.DELETE,
                     HttpEntity.EMPTY,
-                    new ParameterizedTypeReference<Result>() {      
-                    });
+                    new ParameterizedTypeReference<Result>() {
+            });
             Result result = responseEntity.getBody();
-            
-            
+
         } catch (Exception ex) {
             System.out.println(ex.getLocalizedMessage());
         }
-        
+
         return "redirect:/Alumno";
     }
 //
@@ -189,6 +193,7 @@ public class AlumnoController {
 //        return "AlumnoIndex";
 //    }
 //
+
     @GetMapping("Form/{IdAlumno}")
     public String Form(@PathVariable int IdAlumno, Model model) {
         if (IdAlumno == 0) { // Agregar
@@ -199,19 +204,21 @@ public class AlumnoController {
             alumnoDireccion.Direccion.Colonia = new Colonia();
             alumnoDireccion.Direccion.Colonia.Municipio = new Municipio();
             alumnoDireccion.Direccion.Colonia.Municipio.Estado = new Estado();
-            
-            RestTemplate restTemplate = new RestTemplate();
-            
-            ResponseEntity<Result<List<Semestre>>> response = restTemplate.exchange("http://localhost:8081/semestreapi", 
-                    HttpMethod.GET, 
-                    HttpEntity.EMPTY, 
-                    new ParameterizedTypeReference<Result<List<Semestre>>>(){});
 
-            ResponseEntity<Result<List<Estado>>> responseEstado = restTemplate.exchange("http://localhost:8081/estadoapi", 
-                    HttpMethod.GET, 
-                    HttpEntity.EMPTY, 
-                    new ParameterizedTypeReference<Result<List<Estado>>>(){});
-            
+            RestTemplate restTemplate = new RestTemplate();
+
+            ResponseEntity<Result<List<Semestre>>> response = restTemplate.exchange("http://localhost:8081/semestreapi",
+                    HttpMethod.GET,
+                    HttpEntity.EMPTY,
+                    new ParameterizedTypeReference<Result<List<Semestre>>>() {
+            });
+
+            ResponseEntity<Result<List<Estado>>> responseEstado = restTemplate.exchange("http://localhost:8081/estadoapi",
+                    HttpMethod.GET,
+                    HttpEntity.EMPTY,
+                    new ParameterizedTypeReference<Result<List<Estado>>>() {
+            });
+
             model.addAttribute("semestres", response.getBody().object);
             model.addAttribute("alumnoDireccion", alumnoDireccion);
             model.addAttribute("estados", responseEstado.getBody().object);
@@ -262,6 +269,7 @@ public class AlumnoController {
 //        return "AlumnoForm";
 //    }
 //
+
     @PostMapping("Form")
     public String Form(@Valid @ModelAttribute AlumnoDireccion alumnoDireccion, BindingResult BindingResult, @RequestParam MultipartFile imagenFile, Model model) {
 
@@ -274,7 +282,7 @@ public class AlumnoController {
         } catch (Exception ex) {
             //Regresar al Form con la información que ya estaba
         }
-        
+
         RestTemplate restTemplate = new RestTemplate();
 
         if (alumnoDireccion.Alumno.getIdAlumno() == 0) { //Agregar
@@ -288,8 +296,9 @@ public class AlumnoController {
             HttpEntity<AlumnoDireccion> entity = new HttpEntity<>(alumnoDireccion);
             restTemplate.exchange("endpointAdd",
                     HttpMethod.POST,
-                    entity ,
-                    new ParameterizedTypeReference<Result>(){});
+                    entity,
+                    new ParameterizedTypeReference<Result>() {
+            });
         } else {
             if (alumnoDireccion.Direccion.getIdDireccion() == -1) { //Editar usuario
 //                alumnoDAOImplementation.Update(alumnoDireccion.Alumno);

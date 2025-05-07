@@ -25,12 +25,8 @@
             </div>
 
 
-            <div th:if="${listaErrores!= null}">
-                <div th:if="${listaErrores.isEmpty()}">
-                    <h4>Archivo correcto: </h4>
-                    <a th:href="@{/Alumno/CargaMasiva/Procesar}" class="btn btn-success">Procesar archivo</a>
-                </div>
-                <div th:unless="${listaErrores.isEmpty()}">
+            <div th:if="${correcto == null}">
+                <div th:if="${!(listaErrores == null) && !listaErrores.isEmpty()}">
                     <h4>Archivo incorrecto: </h4>
                     <table class="table table-responsive table-bordered">
                         <thead class="table-dark">
@@ -46,8 +42,12 @@
                             </tr>
                         </tbody>
                     </table>
-
                 </div>
+            </div>
+
+            <div th:unless="${correcto == null}">
+                <h4>Archivo correcto: </h4>
+                <a th:href="@{/Alumno/CargaMasiva/Procesar}" class="btn btn-success">Procesar archivo</a>
             </div>
 
         </div>
@@ -62,19 +62,19 @@
             let tipoArchivo = "";
 
             document.getElementById("btnExcel").addEventListener("click", function () {
-                tipoArchivo = "xlsx"; 
+                tipoArchivo = "xlsx";
                 document.getElementById("formularioArchivo").style.display = "block";
-                document.getElementById("archivo").setAttribute("accept", ".xlsx"); 
-                
+                document.getElementById("archivo").setAttribute("accept", ".xlsx");
+
                 document.getElementById("cargaMasiva").classList.remove("btn-primary");
                 document.getElementById("cargaMasiva").classList.add("btn-success");
             });
 
             document.getElementById("btnTxt").addEventListener("click", function () {
-                tipoArchivo = "txt"; 
+                tipoArchivo = "txt";
                 document.getElementById("formularioArchivo").style.display = "block";
-                document.getElementById("archivo").setAttribute("accept", ".txt"); 
-                
+                document.getElementById("archivo").setAttribute("accept", ".txt");
+
                 document.getElementById("cargaMasiva").classList.remove("btn-success");
                 document.getElementById("cargaMasiva").classList.add("btn-primary");
             });
